@@ -397,17 +397,36 @@ function buildDetailTable(rows) {
 }
 
 function applyFilters() {
-  // Primero filtrar solo por los filtros fijos (ep,ef,uo,un) para poblar dropdowns dinámicos
   const v = getFilters();
-  const baseRows = RAW.rows.filter(r =>
-    (!v.ep || r.ep === v.ep) &&
-    (!v.ef || r.ef === v.ef) &&
-    (!v.uo || r.uo === v.uo) &&
-    (!v.un || r.un === v.un)
-  );
-  updateDynamicFilters(baseRows);
+  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca'];
 
-  // Luego filtrar con todos los filtros para los visuales
+  // Para cada campo dinámico, calcular opciones válidas filtrando con todos los OTROS filtros activos
+  DYNAMIC_FIELDS.forEach(field => {
+    const sel = document.getElementById('f-'+field);
+    const current = sel.value;
+
+    const contextRows = RAW.rows.filter(r =>
+      (!v.ep || r.ep === v.ep) &&
+      (!v.ef || r.ef === v.ef) &&
+      (!v.uo || r.uo === v.uo) &&
+      (!v.un || r.un === v.un) &&
+      (field==='zo' || !v.zo || r.zo === v.zo) &&
+      (field==='te' || !v.te || r.te === v.te) &&
+      (field==='or' || !v.or || r.or === v.or) &&
+      (field==='es' || !v.es || r.es === v.es) &&
+      (field==='tq' || !v.tq || r.tq === v.tq) &&
+      (field==='pl' || !v.pl || String(r.pl) === String(v.pl)) &&
+      (field==='em' || !v.em || r.em === v.em) &&
+      (field==='ca' || !v.ca || r.ca === v.ca)
+    );
+
+    const vals = [...new Set(contextRows.map(r => r[field]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
+    sel.innerHTML = '<option value="">Todas</option>';
+    vals.forEach(val => { const o=document.createElement('option'); o.value=val; o.textContent=val; sel.appendChild(o); });
+    if(current && vals.includes(current)) sel.value = current;
+  });
+
+  // Filtrar y renderizar
   const rows = filterRows();
   buildCharts(rows);
   buildTeamTable(rows);
