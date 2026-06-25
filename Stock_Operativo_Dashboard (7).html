@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Operativo CEMA Arauco</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f2; color: #333; font-size: 13px; }
+
+  .header { background: #695F58; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; }
+  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+  .header .logo { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #BFB800; }
+
+  .filters-bar { background: #fff; border-bottom: 2px solid #DFD1A7; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; }
+  .filter-group { display: flex; flex-direction: column; gap: 2px; }
+  .filter-group label { font-size: 10px; font-weight: 600; color: #695F58; text-transform: uppercase; }
+  .filter-group select { font-size: 11px; padding: 3px 6px; border: 1px solid #ccc; border-radius: 3px; background: #fff; color: #333; cursor: pointer; max-width: 130px; }
+  .btn-clear { background: #EA7600; color: white; border: none; border-radius: 4px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-clear:hover { background: #c96500; }
+
+  .main { padding: 12px 16px; display: grid; gap: 12px; }
+  .row2 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 200px 1fr; gap: 12px; }
+
+  .card { background: #fff; border-radius: 6px; border: 1px solid #DFD1A7; padding: 12px; }
+  .card-title { font-size: 12px; font-weight: 600; color: #695F58; margin-bottom: 10px; text-align: center; }
+
+  .kpi-col { display: flex; flex-direction: column; gap: 10px; }
+  .kpi-card { background: #fff; border-radius: 6px; border: 1px solid #DFD1A7; padding: 12px 14px; }
+  .kpi-label { font-size: 10px; color: #888; margin-bottom: 3px; text-transform: uppercase; font-weight: 600; }
+  .kpi-value { font-size: 20px; font-weight: 700; color: #333; line-height: 1.1; }
+  .kpi-sub { font-size: 10px; color: #EA7600; margin-top: 2px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+
+  .team-table-wrap { overflow-y: auto; max-height: 270px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th { background: #695F58; color: white; padding: 5px 8px; text-align: left; position: sticky; top: 0; font-size: 10px; z-index: 1; }
+  tbody tr:nth-child(even) { background: #f9f7f5; }
+  tbody tr:hover { background: #F4BA80 !important; }
+  tbody td { padding: 4px 8px; border-bottom: 1px solid #f0ebe5; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tfoot td { font-weight: 700; background: #DFD1A7 !important; padding: 5px 8px; }
+
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap-tall { position: relative; height: 240px; }
+
+  .detail-wrap { overflow: auto; max-height: 270px; background:#fff; border-radius:6px; border:1px solid #DFD1A7; }
+  .detail-wrap table thead th { background: #BFB800; color: #333; }
+
+  .sema { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
+  .sema-ok { background: #4CAF50; }
+  .sema-warn { background: #EA7600; }
+  .sema-crit { background: #e53935; }
+
+  .row-alert, tbody tr.row-alert:nth-child(even), tbody tr.row-alert:nth-child(odd) { background: #fdecea !important; }
+  .row-alert td { color: #c62828 !important; font-weight: 700; }
+  tbody tr.row-alert:hover { background: #f9c4c2 !important; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #f0ebe5; }
+  ::-webkit-scrollbar-thumb { background: #BFB800; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📦 Stock Operativo CEMA Arauco</h1>
+  <div class="logo">arauco</div>
+</div>
+
+<div class="filters-bar">
+  <div class="filter-group"><label>Estado Predio</label><select id="f-ep" onchange="applyFilters()"><option value="ACTIVO">ACTIVO</option></select></div>
+  <div class="filter-group"><label>Estado Faena</label><select id="f-ef" onchange="applyFilters()"><option value="ACTIVO">ACTIVO</option></select></div>
+  <div class="filter-group"><label>Unidad Op.</label><select id="f-uo" onchange="applyFilters()"><option value="COSECHA">COSECHA</option></select></div>
+  <div class="filter-group"><label>Unidad</label><select id="f-un" onchange="applyFilters()"><option value="CEMA">CEMA</option></select></div>
+  <div class="filter-group"><label>Zona</label><select id="f-zo" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Team</label><select id="f-te" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Origen</label><select id="f-or" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Especie</label><select id="f-es" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Tipo Equipo</label><select id="f-tq" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Prod. Largo</label><select id="f-pl" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Estado Madera</label><select id="f-em" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <button class="btn-clear" onclick="clearFilters()">✕ Quitar Filtros</button>
+</div>
+
+<div class="main">
+  <div class="row2">
+    <div class="card">
+      <div class="card-title">Stock por Zona</div>
+      <div class="chart-wrap"><canvas id="zonaChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock por Origen (Top 20)</div>
+      <div class="chart-wrap-tall"><canvas id="origenChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Team — Saldo vs Stock Crítico</div>
+      <div class="team-table-wrap">
+        <table id="teamTable">
+          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row3">
+    <div class="kpi-col">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Stock</div>
+        <div class="kpi-value" id="kpiTotal">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Predio Mayor Volumen</div>
+        <div class="kpi-value" id="kpiMayorVal" style="font-size:17px">—</div>
+        <div class="kpi-sub" id="kpiMayorNombre">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Orígenes activos</div>
+        <div class="kpi-value" id="kpiOrigenes">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Teams activos</div>
+        <div class="kpi-value" id="kpiTeams">—</div>
+      </div>
+    </div>
+    <div class="detail-wrap">
+      <table id="detailTable">
+        <thead>
+          <tr>
+            <th>Origen</th><th>Team</th><th>Esp</th>
+            <th style="text-align:right">Saldo Op.</th>
+            <th>Prod. Largo</th><th>Producto SAP</th><th>Encargado Prod.</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr class="tfoot">
+            <td colspan="3"><b>Total</b></td>
+            <td class="num" id="detailTotal"></td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let RAW = null;
+async function loadData() {
+  const res = await fetch('stock_data.json');
+  RAW = await res.json();
+  initFilters();
+  applyFilters();
+}
+
+const PALETTE = { orange:'#EA7600', gold:'#BFB800', brown:'#695F58', peach:'#F4BA80', cream:'#DFD1A7' };
+
+
+
+function initFilters() {
+  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em'];
+  DYNAMIC_FIELDS.forEach(f => {
+    const sel = document.getElementById('f-'+f);
+    sel.innerHTML = '<option value="">Todas</option>';
+    const vals = [...new Set(RAW.rows.map(r => r[f]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
+    vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  });
+  ['ep','ef','uo','un'].forEach(f => {
+    const sel = document.getElementById('f-'+f);
+    sel.innerHTML = '<option value="">Todas</option>';
+    const vals = [...new Set(RAW.rows.map(r=>r[f]).filter(v=>v))].sort();
+    vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  });
+  document.getElementById('f-ep').value = 'ACTIVO';
+  document.getElementById('f-ef').value = 'ACTIVO';
+  document.getElementById('f-uo').value = 'COSECHA';
+  document.getElementById('f-un').value = 'CEMA';
+}
+
+function getFilters() {
+  return {
+    ep: document.getElementById('f-ep').value,
+    ef: document.getElementById('f-ef').value,
+    uo: document.getElementById('f-uo').value,
+    un: document.getElementById('f-un').value,
+    zo: document.getElementById('f-zo').value,
+    te: document.getElementById('f-te').value,
+    or: document.getElementById('f-or').value,
+    es: document.getElementById('f-es').value,
+    tq: document.getElementById('f-tq').value,
+    pl: document.getElementById('f-pl').value,
+    em: document.getElementById('f-em').value,
+  };
+}
+
+function filterRows() {
+  const v = getFilters();
+  return RAW.rows.filter(r =>
+    (!v.ep || r.ep === v.ep) &&
+    (!v.ef || r.ef === v.ef) &&
+    (!v.uo || r.uo === v.uo) &&
+    (!v.un || r.un === v.un) &&
+    (!v.zo || r.zo === v.zo) &&
+    (!v.te || r.te === v.te) &&
+    (!v.or || r.or === v.or) &&
+    (!v.es || r.es === v.es) &&
+    (!v.tq || r.tq === v.tq) &&
+    (!v.pl || String(r.pl) === String(v.pl)) &&
+    (!v.em || r.em === v.em)
+  );
+}
+
+function fmt(n) { return Number(n).toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtMil(n) {
+  const abs = Math.abs(n);
+  if(abs>=1000000) return (n/1000000).toLocaleString('es-CL',{maximumFractionDigits:2})+' M';
+  if(abs>=1000) return (n/1000).toLocaleString('es-CL',{maximumFractionDigits:1})+' mil';
+  return fmt(n);
+}
+
+let zonaChart, origenChart;
+
+function buildCharts(rows) {
+  // Zona
+  const zonaMap = {};
+  rows.forEach(r => { if(r.zo) zonaMap[r.zo] = (zonaMap[r.zo]||0) + r.so; });
+  const zonaEntries = Object.entries(zonaMap).sort((a,b)=>b[1]-a[1]);
+
+  // Origen top 20 (positive saldo only)
+  const orMap = {};
+  rows.forEach(r => { if(r.or && r.so > 0) orMap[r.or] = (orMap[r.or]||0) + r.so; });
+  const orEntries = Object.entries(orMap).sort((a,b)=>b[1]-a[1]).slice(0,20);
+
+  // Zona chart
+  const zonaCtx = document.getElementById('zonaChart').getContext('2d');
+  if(zonaChart) zonaChart.destroy();
+  zonaChart = new Chart(zonaCtx, {
+    type: 'bar',
+    data: {
+      labels: zonaEntries.map(e=>e[0]),
+      datasets: [{ data: zonaEntries.map(e=>e[1]), backgroundColor: PALETTE.orange, borderRadius: 3 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 65 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+      },
+      scales: { x: { display: false }, y: { ticks: { font:{size:11}, color:'#333' } } },
+      animation: { onComplete: function() {
+        const ch=this, ctx2=ch.ctx;
+        ch.data.datasets.forEach((ds,di) => {
+          ch.getDatasetMeta(di).data.forEach((bar,i) => {
+            ctx2.save();
+            ctx2.font = 'bold 11px Segoe UI';
+            ctx2.fillStyle = '#333';
+            ctx2.textAlign = 'left';
+            ctx2.textBaseline = 'middle';
+            ctx2.fillText(fmtMil(ds.data[i]), bar.x+6, bar.y);
+            ctx2.restore();
+          });
+        });
+      }}
+    }
+  });
+
+  // Origen chart
+  const orCtx = document.getElementById('origenChart').getContext('2d');
+  if(origenChart) origenChart.destroy();
+  origenChart = new Chart(orCtx, {
+    type: 'bar',
+    data: {
+      labels: orEntries.map(e=>e[0].length>14?e[0].substring(0,13)+'…':e[0]),
+      datasets: [{ data: orEntries.map(e=>e[1]), backgroundColor: PALETTE.gold, borderRadius: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+      },
+      scales: { x: { ticks: { font:{size:8}, maxRotation:45 } }, y: { display: false } },
+      animation: { onComplete: function() {
+        const ch=this, ctx2=ch.ctx;
+        ch.data.datasets.forEach((ds,di) => {
+          ch.getDatasetMeta(di).data.forEach((bar,i) => {
+            ctx2.save();
+            ctx2.font = 'bold 9px Segoe UI';
+            ctx2.fillStyle = '#333';
+            ctx2.textAlign = 'center';
+            ctx2.textBaseline = 'bottom';
+            ctx2.fillText(fmtMil(ds.data[i]), bar.x, bar.y-3);
+            ctx2.restore();
+          });
+        });
+      }}
+    }
+  });
+}
+
+function buildTeamTable(rows) {
+  // Group filtered rows by TeamNombre
+  const teamMap = {};
+  rows.forEach(r => { if(r.te) teamMap[r.te] = (teamMap[r.te]||0) + r.so; });
+
+  // Merge with stock critico (from full teamTable, filtered by current teams)
+  const scMap = {};
+  RAW.teamTable.forEach(t => { scMap[t.team.toUpperCase().trim()] = t.critico; });
+
+  const merged = Object.entries(teamMap)
+    .map(([team, saldo]) => ({ team, saldo, critico: scMap[team.toUpperCase().trim()]||null }))
+    .filter(t => t.critico !== null)
+    .sort((a,b) => b.critico - a.critico);
+
+  const tbody = document.querySelector('#teamTable tbody');
+  tbody.innerHTML = '';
+  let totalSaldo = 0;
+  merged.forEach(t => {
+    totalSaldo += t.saldo;
+    const sobreStock = t.saldo > t.critico;
+    const pct = t.critico ? t.saldo / t.critico : null;
+    let semaClass;
+    if(sobreStock) {
+      semaClass = 'sema-crit'; // rojo: saldo supera el stock crítico
+    } else if(pct !== null) {
+      if(pct >= 0.75) semaClass = 'sema-warn';  // naranja: entre 75% y 100% del crítico
+      else            semaClass = 'sema-crit';   // rojo: bajo 75% del crítico
+    } else {
+      semaClass = 'sema-crit';
+    }
+    const tr = document.createElement('tr');
+    if(sobreStock) tr.classList.add('row-alert');
+    tr.innerHTML = `
+      <td><span class="sema ${semaClass}"></span>${t.team}</td>
+      <td class="num">${fmt(t.saldo)}</td>
+      <td class="num">${t.critico ? fmt(t.critico) : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('totalSaldo').textContent = fmt(totalSaldo);
+}
+
+function buildKPIs(rows) {
+  const total = rows.reduce((s,r) => s+r.so, 0);
+  document.getElementById('kpiTotal').innerHTML = fmtMil(total) + ' <span style="font-size:12px;color:#888">m³</span>';
+
+  const orMap = {};
+  rows.forEach(r => { if(r.or) orMap[r.or] = (orMap[r.or]||0)+r.so; });
+  const sorted = Object.entries(orMap).sort((a,b)=>b[1]-a[1]);
+  if(sorted.length) {
+    document.getElementById('kpiMayorVal').textContent = fmtMil(sorted[0][1]);
+    document.getElementById('kpiMayorNombre').textContent = sorted[0][0];
+  }
+
+  const origCount = Object.values(orMap).filter(v=>v>0).length;
+  document.getElementById('kpiOrigenes').textContent = origCount;
+
+  const teams = new Set(rows.filter(r=>r.te && r.so>0).map(r=>r.te));
+  document.getElementById('kpiTeams').textContent = teams.size;
+}
+
+function buildDetailTable(rows) {
+  const sorted = [...rows].sort((a,b)=>b.so-a.so).slice(0,500);
+  const tbody = document.querySelector('#detailTable tbody');
+  tbody.innerHTML = '';
+  const total = rows.reduce((s,r)=>s+r.so, 0);
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.or}</td><td>${r.te||r.cq}</td><td>${r.es}</td>
+      <td class="num">${fmt(r.so)}</td>
+      <td>${r.pl}</td><td>${r.ps}</td><td>${r.enc}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('detailTotal').textContent = fmt(total);
+}
+
+function applyFilters() {
+  const rows = filterRows();
+  buildCharts(rows);
+  buildTeamTable(rows);
+  buildKPIs(rows);
+  buildDetailTable(rows);
+}
+
+function clearFilters() {
+  document.getElementById('f-ep').value = '';
+  document.getElementById('f-ef').value = '';
+  document.getElementById('f-uo').value = '';
+  document.getElementById('f-un').value = '';
+  ['zo','te','or','es','tq','pl','em'].forEach(f => document.getElementById('f-'+f).value='');
+  applyFilters();
+}
+
+// Init with defaults matching the screenshot
+loadData();
+</script>
+</body>
+</html>
