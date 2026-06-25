@@ -81,6 +81,7 @@
   <div class="filter-group"><label>Tipo Equipo</label><select id="f-tq" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Prod. Largo</label><select id="f-pl" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Estado Madera</label><select id="f-em" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Carpeta</label><select id="f-ca" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <button class="btn-clear" onclick="clearFilters()">✕ Quitar Filtros</button>
 </div>
 
@@ -162,13 +163,7 @@ const PALETTE = { orange:'#EA7600', gold:'#BFB800', brown:'#695F58', peach:'#F4B
 
 
 function initFilters() {
-  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em'];
-  DYNAMIC_FIELDS.forEach(f => {
-    const sel = document.getElementById('f-'+f);
-    sel.innerHTML = '<option value="">Todas</option>';
-    const vals = [...new Set(RAW.rows.map(r => r[f]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
-    vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-  });
+  // Poblar filtros fijos (ep, ef, uo, un)
   ['ep','ef','uo','un'].forEach(f => {
     const sel = document.getElementById('f-'+f);
     sel.innerHTML = '<option value="">Todas</option>';
@@ -179,6 +174,22 @@ function initFilters() {
   document.getElementById('f-ef').value = 'ACTIVO';
   document.getElementById('f-uo').value = 'COSECHA';
   document.getElementById('f-un').value = 'CEMA';
+  updateDynamicFilters(RAW.rows);
+}
+
+function updateDynamicFilters(filteredRows) {
+  // Actualiza los dropdowns dinámicos con solo los valores presentes en las filas filtradas
+  // pero preservando el valor seleccionado si sigue siendo válido
+  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca'];
+  DYNAMIC_FIELDS.forEach(f => {
+    const sel = document.getElementById('f-'+f);
+    const current = sel.value;
+    const vals = [...new Set(filteredRows.map(r => r[f]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
+    sel.innerHTML = '<option value="">Todas</option>';
+    vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    // Restaurar selección si sigue disponible
+    if(current && vals.includes(current)) sel.value = current;
+  });
 }
 
 function getFilters() {
@@ -194,6 +205,7 @@ function getFilters() {
     tq: document.getElementById('f-tq').value,
     pl: document.getElementById('f-pl').value,
     em: document.getElementById('f-em').value,
+    ca: document.getElementById('f-ca').value,
   };
 }
 
@@ -210,7 +222,8 @@ function filterRows() {
     (!v.es || r.es === v.es) &&
     (!v.tq || r.tq === v.tq) &&
     (!v.pl || String(r.pl) === String(v.pl)) &&
-    (!v.em || r.em === v.em)
+    (!v.em || r.em === v.em) &&
+    (!v.ca || r.ca === v.ca)
   );
 }
 
@@ -384,6 +397,17 @@ function buildDetailTable(rows) {
 }
 
 function applyFilters() {
+  // Primero filtrar solo por los filtros fijos (ep,ef,uo,un) para poblar dropdowns dinámicos
+  const v = getFilters();
+  const baseRows = RAW.rows.filter(r =>
+    (!v.ep || r.ep === v.ep) &&
+    (!v.ef || r.ef === v.ef) &&
+    (!v.uo || r.uo === v.uo) &&
+    (!v.un || r.un === v.un)
+  );
+  updateDynamicFilters(baseRows);
+
+  // Luego filtrar con todos los filtros para los visuales
   const rows = filterRows();
   buildCharts(rows);
   buildTeamTable(rows);
@@ -396,7 +420,7 @@ function clearFilters() {
   document.getElementById('f-ef').value = '';
   document.getElementById('f-uo').value = '';
   document.getElementById('f-un').value = '';
-  ['zo','te','or','es','tq','pl','em'].forEach(f => document.getElementById('f-'+f).value='');
+  ['zo','te','or','es','tq','pl','em','ca'].forEach(f => document.getElementById('f-'+f).value='');
   applyFilters();
 }
 
