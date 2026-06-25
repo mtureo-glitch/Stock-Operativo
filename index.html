@@ -241,12 +241,12 @@ function buildCharts(rows) {
   // Zona
   const zonaMap = {};
   rows.forEach(r => { if(r.zo) zonaMap[r.zo] = (zonaMap[r.zo]||0) + r.so; });
-  const zonaEntries = Object.entries(zonaMap).sort((a,b)=>b[1]-a[1]);
+  const zonaEntries = Object.entries(zonaMap).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
 
-  // Origen top 20 (positive saldo only)
+  // Origen top 10 (saldo neto, igual que KPI)
   const orMap = {};
-  rows.forEach(r => { if(r.or && r.so > 0) orMap[r.or] = (orMap[r.or]||0) + r.so; });
-  const orEntries = Object.entries(orMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  rows.forEach(r => { if(r.or) orMap[r.or] = (orMap[r.or]||0) + r.so; });
+  const orEntries = Object.entries(orMap).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   // Zona chart
   const zonaCtx = document.getElementById('zonaChart').getContext('2d');
