@@ -582,7 +582,10 @@ function buildZonaTab() {
 
     // Chart 3: Top predios + Total General
     const predios = z.topPredios || [];
-    const barLabels = ['Total General', ...predios.map(p => p.nombre.length>16?p.nombre.substring(0,15)+'…':p.nombre)];
+    const barLabels = ['Total General', ...predios.map(p => {
+      const nombre = p.nombre.length>16 ? p.nombre.substring(0,15)+'…' : p.nombre;
+      return p.team ? [nombre, '('+p.team+')'] : [nombre];
+    })];
     const barValues = [z.totalGeneral, ...predios.map(p=>p.valor)];
     const barColors = [PALETTE.gold, PALETTE.orange, PALETTE.brown, PALETTE.peach, PALETTE.cream];
     const c3 = new Chart(document.getElementById(barsId).getContext('2d'), {
