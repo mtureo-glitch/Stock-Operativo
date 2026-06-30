@@ -60,6 +60,23 @@
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #f0ebe5; }
   ::-webkit-scrollbar-thumb { background: #BFB800; border-radius: 3px; }
+
+  /* TABS */
+  .tabs-bar { background: #fff; border-bottom: 2px solid #DFD1A7; padding: 0 16px; display: flex; gap: 4px; }
+  .tab-btn { background: none; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 3px solid transparent; }
+  .tab-btn.active { color: #695F58; border-bottom-color: #EA7600; }
+  .tab-btn:hover { color: #695F58; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ZONA PANELS */
+  .zona-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px 16px; }
+  .zona-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; background: #fff; border: 1px solid #DFD1A7; border-radius: 6px; padding: 10px; }
+  .zona-row-title { grid-column: 1 / -1; background: #695F58; color: #fff; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 4px; margin-bottom: 4px; }
+  .zona-panel-title { font-size: 11px; font-weight: 700; color: #695F58; background: #DFD1A7; text-align:center; padding: 4px; border-radius: 3px; margin-bottom: 6px; }
+  .zona-chart-wrap { position: relative; height: 170px; }
+  .zona-donut-wrap { position: relative; height: 170px; }
+  .zona-bars-wrap { position: relative; height: 170px; }
 </style>
 </head>
 <body>
@@ -85,7 +102,12 @@
   <button class="btn-clear" onclick="clearFilters()">✕ Quitar Filtros</button>
 </div>
 
-<div class="main">
+<div class="tabs-bar">
+  <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+  <button class="tab-btn" id="tab-btn-zonas" onclick="switchTab('zonas')">🗺️ Por Zona</button>
+</div>
+
+<div class="tab-content active" id="tab-dashboard">
   <div class="row2">
     <div class="card">
       <div class="card-title">Stock por Zona</div>
@@ -147,6 +169,10 @@
       </table>
     </div>
   </div>
+</div>
+
+<div class="tab-content" id="tab-zonas">
+  <div class="zona-grid" id="zonaGridContainer"></div>
 </div>
 
 <script>
@@ -441,6 +467,145 @@ function clearFilters() {
   document.getElementById('f-un').value = '';
   ['zo','te','or','es','tq','pl','em','ca'].forEach(f => document.getElementById('f-'+f).value='');
   applyFilters();
+}
+
+// ===== TABS =====
+let currentTab = 'dashboard';
+let zonaCharts = []; // referencias para destroy
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
+  document.getElementById('tab-zonas').classList.toggle('active', tab==='zonas');
+  document.getElementById('tab-btn-dashboard').classList.toggle('active', tab==='dashboard');
+  document.getElementById('tab-btn-zonas').classList.toggle('active', tab==='zonas');
+  if(tab === 'zonas') buildZonaTab();
+}
+
+const CAT_COLORS = { 'Aserrable': PALETTE.brown, 'Podado': PALETTE.orange, 'Pulpa': PALETTE.gold, 'Astillas': PALETTE.peach, 'Trozos': PALETTE.cream, 'Otro': '#999' };
+
+function buildZonaTab() {
+  const container = document.getElementById('zonaGridContainer');
+  if(!RAW.zonaSummary) { container.innerHTML = '<p style="padding:20px;color:#888">No hay datos de resumen por zona.</p>'; return; }
+
+  // Destruir charts previos
+  zonaCharts.forEach(c => c.destroy());
+  zonaCharts = [];
+  container.innerHTML = '';
+
+  const zonas = Object.keys(RAW.zonaSummary);
+  zonas.forEach((zona, idx) => {
+    const z = RAW.zonaSummary[zona];
+    const rowId = 'zona-row-' + idx;
+    const espId = 'esp-chart-' + idx;
+    const donutId = 'donut-chart-' + idx;
+    const barsId = 'bars-chart-' + idx;
+
+    const row = document.createElement('div');
+    row.className = 'zona-row';
+    row.innerHTML = `
+      <div class="zona-row-title">Zona ${zona} (m³)</div>
+      <div>
+        <div class="zona-panel-title">Por Especie</div>
+        <div class="zona-chart-wrap"><canvas id="${espId}"></canvas></div>
+      </div>
+      <div>
+        <div class="zona-panel-title">% Total de Producto</div>
+        <div class="zona-donut-wrap"><canvas id="${donutId}"></canvas></div>
+      </div>
+      <div>
+        <div class="zona-panel-title">Predios Con Mayor Stock</div>
+        <div class="zona-bars-wrap"><canvas id="${barsId}"></canvas></div>
+      </div>
+    `;
+    container.appendChild(row);
+
+    // Chart 1: Por especie (barras) + Total General
+    const espEntries = Object.entries(z.porEspecie || {}).sort((a,b)=>b[1]-a[1]);
+    const espLabels = ['Total General', ...espEntries.map(e=>e[0])];
+    const espValues = [z.totalGeneral, ...espEntries.map(e=>e[1])];
+    const espColors = [PALETTE.gold, ...espEntries.map(()=>PALETTE.brown)];
+    const c1 = new Chart(document.getElementById(espId).getContext('2d'), {
+      type: 'bar',
+      data: { labels: espLabels, datasets: [{ data: espValues, backgroundColor: espColors, borderRadius: 3 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 18 } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
+        scales: { x: { ticks: { font:{size:9} } }, y: { display: false } },
+        animation: { onComplete: function(){
+          const ch=this, ctx2=ch.ctx;
+          ch.getDatasetMeta(0).data.forEach((bar,i)=>{
+            ctx2.save(); ctx2.font='bold 9px Segoe UI'; ctx2.fillStyle='#333';
+            ctx2.textAlign='center'; ctx2.textBaseline='bottom';
+            ctx2.fillText(fmtMil(espValues[i]), bar.x, bar.y-3);
+            ctx2.restore();
+          });
+        }}
+      }
+    });
+    zonaCharts.push(c1);
+
+    // Chart 2: Donut % producto
+    const catEntries = Object.entries(z.categoriaPct || {}).filter(e => e[1] > 0).sort((a,b)=>b[1]-a[1]);
+    const c2 = new Chart(document.getElementById(donutId).getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: catEntries.map(e=>e[0]),
+        datasets: [{ data: catEntries.map(e=>e[1]), backgroundColor: catEntries.map(e=>CAT_COLORS[e[0]]||'#999') }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { boxWidth: 10, font: { size: 9 } } },
+          tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw + '%' } },
+          datalabels: false
+        },
+        animation: { onComplete: function(){
+          const ch=this, ctx2=ch.ctx;
+          ch.getDatasetMeta(0).data.forEach((arc,i)=>{
+            const pct = catEntries[i][1];
+            if(pct < 2) return;
+            const mid = (arc.startAngle + arc.endAngle)/2;
+            const r = (arc.innerRadius + arc.outerRadius)/2;
+            const x = arc.x + Math.cos(mid)*r;
+            const y = arc.y + Math.sin(mid)*r;
+            ctx2.save(); ctx2.font='bold 9px Segoe UI'; ctx2.fillStyle='#fff';
+            ctx2.textAlign='center'; ctx2.textBaseline='middle';
+            ctx2.fillText(pct.toFixed(1)+'%', x, y);
+            ctx2.restore();
+          });
+        }}
+      }
+    });
+    zonaCharts.push(c2);
+
+    // Chart 3: Top predios + Total General
+    const predios = z.topPredios || [];
+    const barLabels = ['Total General', ...predios.map(p => p.nombre.length>16?p.nombre.substring(0,15)+'…':p.nombre)];
+    const barValues = [z.totalGeneral, ...predios.map(p=>p.valor)];
+    const barColors = [PALETTE.gold, PALETTE.orange, PALETTE.brown, PALETTE.peach, PALETTE.cream];
+    const c3 = new Chart(document.getElementById(barsId).getContext('2d'), {
+      type: 'bar',
+      data: { labels: barLabels, datasets: [{ data: barValues, backgroundColor: barColors.slice(0, barLabels.length), borderRadius: 3 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 18 } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
+        scales: { x: { ticks: { font:{size:8}, maxRotation: 30 } }, y: { display: false } },
+        animation: { onComplete: function(){
+          const ch=this, ctx2=ch.ctx;
+          ch.getDatasetMeta(0).data.forEach((bar,i)=>{
+            ctx2.save(); ctx2.font='bold 9px Segoe UI'; ctx2.fillStyle='#333';
+            ctx2.textAlign='center'; ctx2.textBaseline='bottom';
+            ctx2.fillText(fmtMil(barValues[i]), bar.x, bar.y-3);
+            ctx2.restore();
+          });
+        }}
+      }
+    });
+    zonaCharts.push(c3);
+  });
 }
 
 // Init with defaults matching the screenshot
