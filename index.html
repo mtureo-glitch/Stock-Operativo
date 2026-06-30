@@ -71,16 +71,15 @@
 
   /* ZONA PANELS */
   .zona-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px 16px; }
-  .zona-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; background: #fff; border: 1px solid #DFD1A7; border-radius: 6px; padding: 10px; align-items: start; }
+  .zona-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; grid-template-rows: auto 1fr; gap: 10px; background: #fff; border: 1px solid #DFD1A7; border-radius: 6px; padding: 10px; position: relative; }
   .zona-row > div { min-width: 0; min-height: 0; }
-  .zona-row-title { grid-column: 1 / -1; background: #695F58; color: #fff; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 4px; margin-bottom: 4px; }
+  .zona-row-title { grid-column: 1 / -1; grid-row: 1; background: #695F58; color: #fff; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 4px; }
   .zona-panel-title { font-size: 11px; font-weight: 700; color: #695F58; background: #DFD1A7; text-align:center; padding: 4px; border-radius: 3px; margin-bottom: 6px; }
   .zona-chart-wrap { position: relative; height: 170px; width: 100%; overflow: hidden; }
   .zona-donut-wrap { position: relative; height: 170px; width: 100%; overflow: hidden; }
   .zona-bars-wrap { position: relative; height: 170px; width: 100%; overflow: hidden; }
   .zona-chart-wrap canvas, .zona-donut-wrap canvas, .zona-bars-wrap canvas { display: block; max-width: 100%; max-height: 100%; }
 
-  .zona-row { position: relative; }
   .zona-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 5; }
   .zona-action-btn { background: #fff; border: 1px solid #DFD1A7; border-radius: 4px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #695F58; }
   .zona-action-btn:hover { background: #F4BA80; color: #fff; }
@@ -531,15 +530,15 @@ function buildZonaTab() {
         <button class="zona-action-btn" title="Expandir" onclick="openZonaModal('${zona}')">⛶</button>
         <button class="zona-action-btn" title="Descargar imagen" onclick="downloadZonaImage('${zona}', ${idx})">⬇</button>
       </div>
-      <div>
+      <div style="grid-row:2">
         <div class="zona-panel-title">Por Especie</div>
         <div class="zona-chart-wrap"><canvas id="${espId}"></canvas></div>
       </div>
-      <div>
+      <div style="grid-row:2">
         <div class="zona-panel-title">% Total de Producto</div>
         <div class="zona-donut-wrap"><canvas id="${donutId}"></canvas></div>
       </div>
-      <div>
+      <div style="grid-row:2">
         <div class="zona-panel-title">Predios Con Mayor Stock</div>
         <div class="zona-bars-wrap"><canvas id="${barsId}"></canvas></div>
       </div>
