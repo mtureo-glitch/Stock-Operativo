@@ -207,16 +207,21 @@ function initFilters() {
 }
 
 function updateDynamicFilters(filteredRows) {
-  // Actualiza los dropdowns dinámicos con solo los valores presentes en las filas filtradas
-  // pero preservando el valor seleccionado si sigue siendo válido
   const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca','tp'];
   DYNAMIC_FIELDS.forEach(f => {
     const sel = document.getElementById('f-'+f);
     const current = sel.value;
-    const vals = [...new Set(filteredRows.map(r => r[f]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
+    let vals = [...new Set(filteredRows.map(r => r[f]).filter(v => v !== '' && v != null && v !== 0 && v !== '0'))];
+    // Para pl: ordenar numéricamente
+    if(f === 'pl') {
+      vals = vals.map(v => String(v)).filter(v => v !== '0');
+      vals.sort((a,b) => parseFloat(a) - parseFloat(b));
+    } else {
+      vals = vals.map(v => String(v));
+      vals.sort((a,b) => a.localeCompare(b));
+    }
     sel.innerHTML = '<option value="">Todas</option>';
     vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-    // Restaurar selección si sigue disponible
     if(current && vals.includes(current)) sel.value = current;
   });
 }
@@ -251,7 +256,7 @@ function filterRows() {
     (!v.or || r.or === v.or) &&
     (!v.es || r.es === v.es) &&
     (!v.tq || r.tq === v.tq) &&
-    (!v.pl || parseFloat(r.pl) === parseFloat(v.pl)) &&
+    (!v.pl || String(r.pl) === String(v.pl)) &&
     (!v.em || r.em === v.em) &&
     (!v.ca || r.ca === v.ca) &&
     (!v.tp || r.tp === v.tp)
