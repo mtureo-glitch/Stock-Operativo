@@ -101,6 +101,7 @@
   <div class="filter-group"><label>Prod. Largo</label><select id="f-pl" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Estado Madera</label><select id="f-em" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Carpeta</label><select id="f-ca" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Producto SAP</label><select id="f-ps" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <button class="btn-clear" onclick="clearFilters()">✕ Quitar Filtros</button>
 </div>
 
@@ -208,7 +209,7 @@ function initFilters() {
 function updateDynamicFilters(filteredRows) {
   // Actualiza los dropdowns dinámicos con solo los valores presentes en las filas filtradas
   // pero preservando el valor seleccionado si sigue siendo válido
-  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca'];
+  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca','ps'];
   DYNAMIC_FIELDS.forEach(f => {
     const sel = document.getElementById('f-'+f);
     const current = sel.value;
@@ -234,6 +235,7 @@ function getFilters() {
     pl: document.getElementById('f-pl').value,
     em: document.getElementById('f-em').value,
     ca: document.getElementById('f-ca').value,
+    ps: document.getElementById('f-ps').value,
   };
 }
 
@@ -249,9 +251,10 @@ function filterRows() {
     (!v.or || r.or === v.or) &&
     (!v.es || r.es === v.es) &&
     (!v.tq || r.tq === v.tq) &&
-    (!v.pl || String(r.pl) === String(v.pl)) &&
+    (!v.pl || Number(r.pl) === Number(v.pl)) &&
     (!v.em || r.em === v.em) &&
-    (!v.ca || r.ca === v.ca)
+    (!v.ca || r.ca === v.ca) &&
+    (!v.ps || r.ps === v.ps)
   );
 }
 
@@ -426,7 +429,7 @@ function buildDetailTable(rows) {
 
 function applyFilters() {
   const v = getFilters();
-  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca'];
+  const DYNAMIC_FIELDS = ['zo','te','or','es','tq','pl','em','ca','ps'];
 
   // Para cada campo dinámico, calcular opciones válidas filtrando con todos los OTROS filtros activos
   DYNAMIC_FIELDS.forEach(field => {
@@ -445,7 +448,8 @@ function applyFilters() {
       (field==='tq' || !v.tq || r.tq === v.tq) &&
       (field==='pl' || !v.pl || String(r.pl) === String(v.pl)) &&
       (field==='em' || !v.em || r.em === v.em) &&
-      (field==='ca' || !v.ca || r.ca === v.ca)
+      (field==='ca' || !v.ca || r.ca === v.ca) &&
+      (field==='ps' || !v.ps || r.ps === v.ps)
     );
 
     const vals = [...new Set(contextRows.map(r => r[field]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
@@ -467,7 +471,7 @@ function clearFilters() {
   document.getElementById('f-ef').value = '';
   document.getElementById('f-uo').value = '';
   document.getElementById('f-un').value = '';
-  ['zo','te','or','es','tq','pl','em','ca'].forEach(f => document.getElementById('f-'+f).value='');
+  ['zo','te','or','es','tq','pl','em','ca','ps'].forEach(f => document.getElementById('f-'+f).value='');
   applyFilters();
 }
 
