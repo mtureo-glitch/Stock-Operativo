@@ -222,7 +222,7 @@ function updateDynamicFilters(filteredRows) {
     }
     sel.innerHTML = '<option value="">Todas</option>';
     vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
-    if(current && vals.includes(current)) sel.value = current;
+    if(current && vals.includes(String(current))) sel.value = current;
   });
 }
 
@@ -460,7 +460,7 @@ function applyFilters() {
     const vals = [...new Set(contextRows.map(r => r[field]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
     sel.innerHTML = '<option value="">Todas</option>';
     vals.forEach(val => { const o=document.createElement('option'); o.value=val; o.textContent=val; sel.appendChild(o); });
-    if(current && vals.includes(current)) sel.value = current;
+    if(current && vals.includes(String(current))) sel.value = current;
   });
 
   // Filtrar y renderizar
