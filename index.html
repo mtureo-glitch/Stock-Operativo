@@ -99,9 +99,9 @@
   <div class="filter-group"><label>Especie</label><select id="f-es" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Tipo Equipo</label><select id="f-tq" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Prod. Largo</label><select id="f-pl" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Tipo Producto</label><select id="f-tp" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Estado Madera</label><select id="f-em" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Carpeta</label><select id="f-ca" onchange="applyFilters()"><option value="">Todas</option></select></div>
-  <div class="filter-group"><label>Tipo Producto</label><select id="f-tp" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <button class="btn-clear" onclick="clearFilters()">✕ Quitar Filtros</button>
 </div>
 
@@ -235,7 +235,7 @@ function getFilters() {
     pl: document.getElementById('f-pl').value,
     em: document.getElementById('f-em').value,
     ca: document.getElementById('f-ca').value,
-    ps: document.getElementById('f-tp').value,
+    tp: document.getElementById('f-tp').value,
   };
 }
 
@@ -254,7 +254,7 @@ function filterRows() {
     (!v.pl || parseFloat(r.pl) === parseFloat(v.pl)) &&
     (!v.em || r.em === v.em) &&
     (!v.ca || r.ca === v.ca) &&
-    (!v.ps || r.ps === v.ps)
+    (!v.tp || r.tp === v.tp)
   );
 }
 
@@ -449,7 +449,7 @@ function applyFilters() {
       (field==='pl' || !v.pl || String(r.pl) === String(v.pl)) &&
       (field==='em' || !v.em || r.em === v.em) &&
       (field==='ca' || !v.ca || r.ca === v.ca) &&
-      (field==='tp' || !v.ps || r.ps === v.ps)
+      (field==='tp' || !v.tp || r.tp === v.tp)
     );
 
     const vals = [...new Set(contextRows.map(r => r[field]).filter(v => v !== '' && v != null))].sort((a,b)=>String(a).localeCompare(String(b)));
