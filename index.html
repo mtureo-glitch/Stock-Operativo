@@ -256,7 +256,7 @@ function filterRows() {
     (!v.or || r.or === v.or) &&
     (!v.es || r.es === v.es) &&
     (!v.tq || r.tq === v.tq) &&
-    (!v.pl || String(r.pl) === String(v.pl)) &&
+    (!v.pl || r.pl == v.pl) &&
     (!v.em || r.em === v.em) &&
     (!v.ca || r.ca === v.ca) &&
     (!v.tp || r.tp === v.tp)
@@ -451,7 +451,7 @@ function applyFilters() {
       (field==='or' || !v.or || r.or === v.or) &&
       (field==='es' || !v.es || r.es === v.es) &&
       (field==='tq' || !v.tq || r.tq === v.tq) &&
-      (field==='pl' || !v.pl || String(r.pl) === String(v.pl)) &&
+      (field==='pl' || !v.pl || r.pl == v.pl) &&
       (field==='em' || !v.em || r.em === v.em) &&
       (field==='ca' || !v.ca || r.ca === v.ca) &&
       (field==='tp' || !v.tp || r.tp === v.tp)
