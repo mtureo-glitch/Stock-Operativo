@@ -127,9 +127,9 @@
       <div class="card-title">Team — Saldo vs Stock Crítico</div>
       <div class="team-table-wrap">
         <table id="teamTable">
-          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th><th>Últimos Predios</th><th style="text-align:right">Saldo Predio</th></tr></thead>
+          <thead><tr><th>Team</th><th style="text-align:right">Saldo Predio</th><th style="text-align:right">Stk Crítico</th><th>Últimos Predios</th></tr></thead>
           <tbody></tbody>
-          <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td colspan="3"></td></tr></tfoot>
+          <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td colspan="2"></td></tr></tfoot>
         </table>
       </div>
     </div>
@@ -404,10 +404,9 @@ function buildTeamTable(rows) {
     if(sobreStock) tr.classList.add('row-alert');
     tr.innerHTML = `
       <td><span class="sema ${semaClass}"></span>${t.team}</td>
-      <td class="num">${fmt(t.saldo)}</td>
+      <td class="num" style="font-weight:600;color:${sobreStock?'#c62828':'#333'}">${t.saldoUltimoPredio ? fmt(t.saldoUltimoPredio) : '—'}</td>
       <td class="num">${t.critico ? fmt(t.critico) : '—'}</td>
       <td style="font-size:10px;color:#555">${t.ultimosPredios||'—'} <span style="color:#aaa;font-size:9px">${t.ultimaFecha||''}</span></td>
-      <td class="num" style="font-size:10px;font-weight:600;color:${sobreStock?'#c62828':'#333'}">${t.saldoUltimoPredio ? fmt(t.saldoUltimoPredio) : '—'}</td>
     `;
     tbody.appendChild(tr);
   });
