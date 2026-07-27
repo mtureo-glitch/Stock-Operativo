@@ -402,12 +402,27 @@ function buildTeamTable(rows) {
     else                  semaClass = 'sema-ok';      // verde: < 70%
     const tr = document.createElement('tr');
     if(sobreStock) tr.classList.add('row-alert');
+    tr.style.cursor = 'pointer';
+    tr.title = 'Clic para filtrar por ' + t.team;
     tr.innerHTML = `
       <td><span class="sema ${semaClass}"></span>${t.team}</td>
       <td class="num" style="font-weight:600;color:${sobreStock?'#c62828':'#333'}">${t.saldoUltimoPredio ? fmt(t.saldoUltimoPredio) : '—'}</td>
       <td class="num">${t.critico ? fmt(t.critico) : '—'}</td>
       <td style="font-size:10px;color:#555">${t.ultimosPredios||'—'} <span style="color:#aaa;font-size:9px">${t.ultimaFecha||''}</span></td>
     `;
+    tr.addEventListener('click', () => {
+      const sel = document.getElementById('f-te');
+      if(sel.value === t.team) {
+        // Si ya estaba seleccionado, deseleccionar
+        sel.value = '';
+      } else {
+        sel.value = t.team;
+      }
+      applyFilters();
+      // Resaltar fila seleccionada
+      document.querySelectorAll('#teamTable tbody tr').forEach(r => r.style.outline = '');
+      if(sel.value === t.team) tr.style.outline = '2px solid #EA7600';
+    });
     tbody.appendChild(tr);
   });
   document.getElementById('totalSaldo').textContent = fmt(totalSaldo);
