@@ -50,7 +50,7 @@
 
   .sema { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
   .sema-ok { background: #4CAF50; }
-  .sema-warn { background: #EA7600; }
+  .sema-warn { background: #FFC107; }
   .sema-crit { background: #e53935; }
 
   .row-alert, tbody tr.row-alert:nth-child(even), tbody tr.row-alert:nth-child(odd) { background: #fdecea !important; }
@@ -397,9 +397,9 @@ function buildTeamTable(rows) {
     const sobreStock = saldoComp > t.critico;
     const pct = t.critico ? saldoComp / t.critico : null;
     let semaClass;
-    if(sobreStock)          semaClass = 'sema-crit';
-    else if(pct >= 0.75)    semaClass = 'sema-warn';
-    else                    semaClass = 'sema-crit';
+    if(sobreStock)        semaClass = 'sema-crit';   // rojo: > crítico
+    else if(pct >= 0.70)  semaClass = 'sema-warn';   // amarillo: 70%-100%
+    else                  semaClass = 'sema-ok';      // verde: < 70%
     const tr = document.createElement('tr');
     if(sobreStock) tr.classList.add('row-alert');
     tr.innerHTML = `
