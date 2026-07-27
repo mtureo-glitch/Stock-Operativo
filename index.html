@@ -127,9 +127,9 @@
       <div class="card-title">Team — Saldo vs Stock Crítico</div>
       <div class="team-table-wrap">
         <table id="teamTable">
-          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th></tr></thead>
+          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th><th>Último Predio</th><th style="text-align:right">Vol. m³</th></tr></thead>
           <tbody></tbody>
-          <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td></td></tr></tfoot>
+          <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td colspan="3"></td></tr></tfoot>
         </table>
       </div>
     </div>
@@ -399,6 +399,8 @@ function buildTeamTable(rows) {
       <td><span class="sema ${semaClass}"></span>${t.team}</td>
       <td class="num">${fmt(t.saldo)}</td>
       <td class="num">${t.critico ? fmt(t.critico) : '—'}</td>
+      <td style="font-size:10px;color:#555">${t.ultimoPredio||'—'}</td>
+      <td class="num" style="font-size:10px">${t.volUltimo ? fmt(t.volUltimo) : '—'}</td>
     `;
     tbody.appendChild(tr);
   });
