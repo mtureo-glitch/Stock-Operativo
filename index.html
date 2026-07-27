@@ -166,11 +166,21 @@
   <div style="background:#fff;border-radius:8px;padding:20px;width:92vw;max-height:90vh;overflow:auto;position:relative;">
     <button onclick="closeTeamModal()" style="position:absolute;top:10px;right:14px;font-size:20px;cursor:pointer;background:none;border:none;color:#695F58;">✕</button>
     <h3 style="color:#695F58;margin-bottom:12px;">Team — Saldo vs Stock Crítico</h3>
-    <!-- Filtro múltiple -->
-    <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-      <span style="font-size:11px;font-weight:600;color:#695F58;">Filtrar Teams:</span>
-      <div id="teamCheckboxes" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <button onclick="clearTeamFilter()" style="background:#EA7600;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;">✕ Limpiar</button>
+    <!-- Filtros del modal -->
+    <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <div>
+        <label style="font-size:10px;font-weight:600;color:#695F58;display:block;margin-bottom:3px;">ZONA</label>
+        <select id="modal-zona" onchange="renderTeamModal()" style="font-size:11px;padding:4px 8px;border:1px solid #ccc;border-radius:3px;min-width:120px;">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:600;color:#695F58;display:block;margin-bottom:3px;">TEAM</label>
+        <select id="modal-teams" multiple onchange="renderTeamModal()" style="font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:3px;min-width:180px;height:80px;">
+        </select>
+        <div style="font-size:9px;color:#aaa;margin-top:2px;">Ctrl+clic para selección múltiple</div>
+      </div>
+      <button onclick="clearTeamFilter()" style="background:#EA7600;color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:11px;cursor:pointer;align-self:flex-start;margin-top:16px;">✕ Limpiar</button>
     </div>
     <table id="teamModalTable" style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:#695F58;color:#fff;">
@@ -731,11 +741,14 @@ function renderZonaCharts(z, espId, donutId, barsId, scale) {
 }
 
 // ===== MODAL TEAM =====
-let selectedTeams = new Set();
-
 function openTeamModal() {
   document.getElementById('teamModal').style.display = 'flex';
-  buildTeamCheckboxes();
+  // Poblar zona dropdown
+  const zonas = [...new Set(RAW.rows.map(r=>r.zo).filter(v=>v))].sort();
+  const zonaEl = document.getElementById('modal-zona');
+  zonaEl.innerHTML = '<option value="">Todas</option>';
+  zonas.forEach(z => { const o=document.createElement('option'); o.value=z; o.textContent=z; zonaEl.appendChild(o); });
+  buildTeamMultiselect();
   renderTeamModal();
 }
 
@@ -743,43 +756,38 @@ function closeTeamModal() {
   document.getElementById('teamModal').style.display = 'none';
 }
 
-function buildTeamCheckboxes() {
-  const container = document.getElementById('teamCheckboxes');
-  container.innerHTML = '';
-  const v = getFilters();
-  const teamMap = {};
-  filterRows().forEach(r => { if(r.te) teamMap[r.te] = (teamMap[r.te]||0) + r.so; });
-  const scMap = {};
-  RAW.teamTable.forEach(t => { scMap[t.team.toUpperCase().trim()] = t; });
-  const teams = RAW.teamTable.map(t => t.team).filter(t => teamMap[t] !== undefined);
-
-  teams.forEach(team => {
-    const label = document.createElement('label');
-    label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11px;background:#f4f4f2;padding:3px 8px;border-radius:12px;cursor:pointer;border:1px solid #ddd;';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = team;
-    cb.checked = selectedTeams.has(team);
-    cb.onchange = () => {
-      if(cb.checked) selectedTeams.add(team);
-      else selectedTeams.delete(team);
-      renderTeamModal();
-    };
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(team));
-    if(selectedTeams.has(team)) label.style.background = '#EA7600'; label.style.color = selectedTeams.has(team)?'#fff':'#333';
-    container.appendChild(label);
+function buildTeamMultiselect() {
+  const zona = document.getElementById('modal-zona').value;
+  const rows = filterRows().filter(r => !zona || r.zo === zona);
+  const teamSet = new Set(rows.map(r=>r.te).filter(v=>v));
+  const sel = document.getElementById('modal-teams');
+  const prev = [...sel.selectedOptions].map(o=>o.value);
+  sel.innerHTML = '';
+  RAW.teamTable.forEach(t => {
+    if(!teamSet.has(t.team)) return;
+    const o = document.createElement('option');
+    o.value = t.team;
+    o.textContent = t.team;
+    if(prev.includes(t.team)) o.selected = true;
+    sel.appendChild(o);
   });
 }
 
 function clearTeamFilter() {
-  selectedTeams.clear();
-  buildTeamCheckboxes();
+  document.getElementById('modal-zona').value = '';
+  const sel = document.getElementById('modal-teams');
+  [...sel.options].forEach(o => o.selected = false);
+  buildTeamMultiselect();
   renderTeamModal();
 }
 
 function renderTeamModal() {
-  const rows = filterRows();
+  buildTeamMultiselect();
+  const zona = document.getElementById('modal-zona').value;
+  const sel = document.getElementById('modal-teams');
+  const selectedTeams = new Set([...sel.selectedOptions].map(o=>o.value));
+
+  const rows = filterRows().filter(r => !zona || r.zo === zona);
   const teamMap = {};
   rows.forEach(r => { if(r.te) teamMap[r.te] = (teamMap[r.te]||0) + r.so; });
 
@@ -788,7 +796,8 @@ function renderTeamModal() {
   let total = 0;
 
   const teamsToShow = RAW.teamTable.filter(t =>
-    teamMap[t.team] !== undefined && (selectedTeams.size === 0 || selectedTeams.has(t.team))
+    teamMap[t.team] !== undefined &&
+    (selectedTeams.size === 0 || selectedTeams.has(t.team))
   );
 
   teamsToShow.forEach((t, i) => {
@@ -799,8 +808,7 @@ function renderTeamModal() {
     total += saldoComp;
 
     const tr = document.createElement('tr');
-    tr.style.background = i%2===0 ? '#fff' : '#f9f7f5';
-    if(sobreStock) tr.style.background = '#fdecea';
+    tr.style.background = sobreStock ? '#fdecea' : (i%2===0 ? '#fff' : '#f9f7f5');
     tr.innerHTML = `
       <td style="padding:5px 10px"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:6px;"></span>${t.team}</td>
       <td style="padding:5px 10px;text-align:right;font-weight:600;color:${sobreStock?'#c62828':'#333'}">${t.saldoUltimoPredio ? fmt(t.saldoUltimoPredio) : '—'}</td>
@@ -811,8 +819,6 @@ function renderTeamModal() {
   });
 
   document.getElementById('teamModalTotal').textContent = fmt(total);
-  // Rebuild checkboxes to update colors
-  buildTeamCheckboxes();
 }
 
 // ===== SEARCHABLE SELECT para Origen =====
