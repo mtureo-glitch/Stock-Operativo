@@ -127,7 +127,7 @@
       <div class="card-title">Team — Saldo vs Stock Crítico</div>
       <div class="team-table-wrap">
         <table id="teamTable">
-          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th><th>Último Predio</th><th style="text-align:right">Vol. m³</th></tr></thead>
+          <thead><tr><th>Team</th><th style="text-align:right">Saldo Op.</th><th style="text-align:right">Stk Crítico</th><th>Últimos Predios</th><th style="text-align:right">Saldo Predio</th></tr></thead>
           <tbody></tbody>
           <tfoot><tr class="tfoot"><td><b>Total</b></td><td class="num" id="totalSaldo"></td><td colspan="3"></td></tr></tfoot>
         </table>
@@ -373,7 +373,17 @@ function buildTeamTable(rows) {
   RAW.teamTable.forEach(t => { scMap[t.team.toUpperCase().trim()] = t.critico; });
 
   const merged = Object.entries(teamMap)
-    .map(([team, saldo]) => ({ team, saldo, critico: scMap[team.toUpperCase().trim()]||null }))
+    .map(([team, saldo]) => {
+      const key = team.toUpperCase().trim();
+      const raw = RAW.teamTable.find(t => t.team.toUpperCase().trim() === key);
+      return {
+        team, saldo,
+        critico: raw ? raw.critico : null,
+        ultimosPredios: raw ? (raw.ultimosPredios||'') : '',
+        saldoUltimoPredio: raw ? (raw.saldoUltimoPredio||0) : 0,
+        ultimaFecha: raw ? (raw.ultimaFecha||'') : ''
+      };
+    })
     .filter(t => t.critico !== null)
     .sort((a,b) => b.critico - a.critico);
 
@@ -382,25 +392,22 @@ function buildTeamTable(rows) {
   let totalSaldo = 0;
   merged.forEach(t => {
     totalSaldo += t.saldo;
-    const sobreStock = t.saldo > t.critico;
-    const pct = t.critico ? t.saldo / t.critico : null;
+    // Semáforo basado en saldo del último predio vs stock crítico
+    const saldoComp = t.saldoUltimoPredio > 0 ? t.saldoUltimoPredio : t.saldo;
+    const sobreStock = saldoComp > t.critico;
+    const pct = t.critico ? saldoComp / t.critico : null;
     let semaClass;
-    if(sobreStock) {
-      semaClass = 'sema-crit'; // rojo: saldo supera el stock crítico
-    } else if(pct !== null) {
-      if(pct >= 0.75) semaClass = 'sema-warn';  // naranja: entre 75% y 100% del crítico
-      else            semaClass = 'sema-crit';   // rojo: bajo 75% del crítico
-    } else {
-      semaClass = 'sema-crit';
-    }
+    if(sobreStock)          semaClass = 'sema-crit';
+    else if(pct >= 0.75)    semaClass = 'sema-warn';
+    else                    semaClass = 'sema-crit';
     const tr = document.createElement('tr');
     if(sobreStock) tr.classList.add('row-alert');
     tr.innerHTML = `
       <td><span class="sema ${semaClass}"></span>${t.team}</td>
       <td class="num">${fmt(t.saldo)}</td>
       <td class="num">${t.critico ? fmt(t.critico) : '—'}</td>
-      <td style="font-size:10px;color:#555">${t.ultimoPredio||'—'}</td>
-      <td class="num" style="font-size:10px">${t.volUltimo ? fmt(t.volUltimo) : '—'}</td>
+      <td style="font-size:10px;color:#555">${t.ultimosPredios||'—'} <span style="color:#aaa;font-size:9px">${t.ultimaFecha||''}</span></td>
+      <td class="num" style="font-size:10px;font-weight:600;color:${sobreStock?'#c62828':'#333'}">${t.saldoUltimoPredio ? fmt(t.saldoUltimoPredio) : '—'}</td>
     `;
     tbody.appendChild(tr);
   });
