@@ -176,9 +176,15 @@
       </div>
       <div>
         <label style="font-size:10px;font-weight:600;color:#695F58;display:block;margin-bottom:3px;">TEAM</label>
-        <select id="modal-teams" multiple onchange="renderTeamModal()" style="font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:3px;min-width:180px;height:80px;">
-        </select>
-        <div style="font-size:9px;color:#aaa;margin-top:2px;">Ctrl+clic para selección múltiple</div>
+        <div style="position:relative;display:inline-block;">
+          <div id="modal-team-display" onclick="toggleModalTeamDD()" style="font-size:11px;padding:4px 28px 4px 8px;border:1px solid #ccc;border-radius:3px;background:#fff;cursor:pointer;min-width:160px;position:relative;">
+            <span id="modal-team-label">Todos</span>
+            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:8px;color:#888;">▼</span>
+          </div>
+          <div id="modal-team-dd" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid #ccc;border-radius:3px;box-shadow:0 4px 12px rgba(0,0,0,0.15);min-width:180px;max-height:240px;overflow-y:auto;">
+            <div id="modal-team-checks" style="padding:6px 0;"></div>
+          </div>
+        </div>
       </div>
       <button onclick="clearTeamFilter()" style="background:#EA7600;color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:11px;cursor:pointer;align-self:flex-start;margin-top:16px;">✕ Limpiar</button>
     </div>
@@ -741,52 +747,95 @@ function renderZonaCharts(z, espId, donutId, barsId, scale) {
 }
 
 // ===== MODAL TEAM =====
+let modalSelectedTeams = new Set();
+
 function openTeamModal() {
   document.getElementById('teamModal').style.display = 'flex';
-  // Poblar zona dropdown
   const zonas = [...new Set(RAW.rows.map(r=>r.zo).filter(v=>v))].sort();
   const zonaEl = document.getElementById('modal-zona');
   zonaEl.innerHTML = '<option value="">Todas</option>';
   zonas.forEach(z => { const o=document.createElement('option'); o.value=z; o.textContent=z; zonaEl.appendChild(o); });
-  buildTeamMultiselect();
+  buildTeamCheckDD();
   renderTeamModal();
 }
 
 function closeTeamModal() {
   document.getElementById('teamModal').style.display = 'none';
+  document.getElementById('modal-team-dd').style.display = 'none';
 }
 
-function buildTeamMultiselect() {
+function toggleModalTeamDD() {
+  const dd = document.getElementById('modal-team-dd');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// Cerrar dropdown al click fuera
+document.addEventListener('click', e => {
+  if(!e.target.closest('#modal-team-display') && !e.target.closest('#modal-team-dd')) {
+    const dd = document.getElementById('modal-team-dd');
+    if(dd) dd.style.display = 'none';
+  }
+});
+
+function buildTeamCheckDD() {
   const zona = document.getElementById('modal-zona').value;
   const rows = filterRows().filter(r => !zona || r.zo === zona);
   const teamSet = new Set(rows.map(r=>r.te).filter(v=>v));
-  const sel = document.getElementById('modal-teams');
-  const prev = [...sel.selectedOptions].map(o=>o.value);
-  sel.innerHTML = '';
+  const container = document.getElementById('modal-team-checks');
+  container.innerHTML = '';
+
+  // Opción "Todos"
+  const allLabel = document.createElement('label');
+  allLabel.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid #f0ebe5;';
+  const allCb = document.createElement('input');
+  allCb.type = 'checkbox';
+  allCb.id = 'modal-cb-all';
+  allCb.checked = modalSelectedTeams.size === 0;
+  allCb.onchange = () => { modalSelectedTeams.clear(); buildTeamCheckDD(); renderTeamModal(); };
+  allLabel.appendChild(allCb);
+  allLabel.appendChild(document.createTextNode('Todos'));
+  container.appendChild(allLabel);
+
   RAW.teamTable.forEach(t => {
     if(!teamSet.has(t.team)) return;
-    const o = document.createElement('option');
-    o.value = t.team;
-    o.textContent = t.team;
-    if(prev.includes(t.team)) o.selected = true;
-    sel.appendChild(o);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:11px;cursor:pointer;';
+    label.onmouseover = () => label.style.background = '#f4f0eb';
+    label.onmouseout = () => label.style.background = '';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = t.team;
+    cb.checked = modalSelectedTeams.has(t.team);
+    cb.onchange = () => {
+      if(cb.checked) modalSelectedTeams.add(t.team);
+      else modalSelectedTeams.delete(t.team);
+      updateModalTeamLabel();
+      renderTeamModal();
+    };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(t.team));
+    container.appendChild(label);
   });
+  updateModalTeamLabel();
+}
+
+function updateModalTeamLabel() {
+  const lbl = document.getElementById('modal-team-label');
+  if(modalSelectedTeams.size === 0) lbl.textContent = 'Todos';
+  else if(modalSelectedTeams.size === 1) lbl.textContent = [...modalSelectedTeams][0];
+  else lbl.textContent = modalSelectedTeams.size + ' seleccionados';
 }
 
 function clearTeamFilter() {
   document.getElementById('modal-zona').value = '';
-  const sel = document.getElementById('modal-teams');
-  [...sel.options].forEach(o => o.selected = false);
-  buildTeamMultiselect();
+  modalSelectedTeams.clear();
+  buildTeamCheckDD();
   renderTeamModal();
 }
 
 function renderTeamModal() {
-  buildTeamMultiselect();
+  buildTeamCheckDD();
   const zona = document.getElementById('modal-zona').value;
-  const sel = document.getElementById('modal-teams');
-  const selectedTeams = new Set([...sel.selectedOptions].map(o=>o.value));
-
   const rows = filterRows().filter(r => !zona || r.zo === zona);
   const teamMap = {};
   rows.forEach(r => { if(r.te) teamMap[r.te] = (teamMap[r.te]||0) + r.so; });
@@ -797,16 +846,15 @@ function renderTeamModal() {
 
   const teamsToShow = RAW.teamTable.filter(t =>
     teamMap[t.team] !== undefined &&
-    (selectedTeams.size === 0 || selectedTeams.has(t.team))
+    (modalSelectedTeams.size === 0 || modalSelectedTeams.has(t.team))
   );
 
   teamsToShow.forEach((t, i) => {
     const saldoComp = t.saldoUltimoPredio > 0 ? t.saldoUltimoPredio : (teamMap[t.team]||0);
     const sobreStock = saldoComp > t.critico;
     const pct = t.critico ? saldoComp / t.critico : null;
-    let color = sobreStock ? '#e53935' : (pct >= 0.70 ? '#FFC107' : '#4CAF50');
+    const color = sobreStock ? '#e53935' : (pct >= 0.70 ? '#FFC107' : '#4CAF50');
     total += saldoComp;
-
     const tr = document.createElement('tr');
     tr.style.background = sobreStock ? '#fdecea' : (i%2===0 ? '#fff' : '#f9f7f5');
     tr.innerHTML = `
@@ -817,7 +865,6 @@ function renderTeamModal() {
     `;
     tbody.appendChild(tr);
   });
-
   document.getElementById('teamModalTotal').textContent = fmt(total);
 }
 
