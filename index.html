@@ -57,6 +57,19 @@
   .row-alert td { color: #c62828 !important; font-weight: 700; }
   tbody tr.row-alert:hover { background: #f9c4c2 !important; }
 
+  /* Searchable select */
+  .searchable-select { position: relative; min-width: 130px; max-width: 160px; }
+  .ss-display { font-size: 11px; padding: 3px 6px; border: 1px solid #ccc; border-radius: 3px; background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden; }
+  .ss-text { overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+  .ss-arrow { font-size: 8px; color: #888; margin-left: 4px; flex-shrink: 0; }
+  .ss-dropdown { position: absolute; top: 100%; left: 0; z-index: 1000; background: #fff; border: 1px solid #ccc; border-radius: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; max-width: 280px; }
+  .ss-input { width: 100%; padding: 5px 8px; border: none; border-bottom: 1px solid #eee; font-size: 11px; outline: none; box-sizing: border-box; }
+  .ss-list { max-height: 220px; overflow-y: auto; }
+  .ss-option { padding: 5px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ss-option:hover { background: #F4BA80; }
+  .ss-option.selected { background: #EA7600; color: white; }
+  .ss-option.hidden { display: none; }
+
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #f0ebe5; }
   ::-webkit-scrollbar-thumb { background: #BFB800; border-radius: 3px; }
@@ -98,7 +111,19 @@
   <div class="filter-group"><label>Unidad</label><select id="f-un" onchange="applyFilters()"><option value="CEMA">CEMA</option></select></div>
   <div class="filter-group"><label>Zona</label><select id="f-zo" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Team</label><select id="f-te" onchange="applyFilters()"><option value="">Todas</option></select></div>
-  <div class="filter-group"><label>Origen</label><select id="f-or" onchange="applyFilters()"><option value="">Todas</option></select></div>
+  <div class="filter-group"><label>Origen</label>
+    <div class="searchable-select" id="ss-or">
+      <div class="ss-display" onclick="toggleSS('ss-or')">
+        <span class="ss-text" id="ss-or-text">Todas</span>
+        <span class="ss-arrow">▼</span>
+      </div>
+      <div class="ss-dropdown" id="ss-or-dropdown" style="display:none">
+        <input class="ss-input" type="text" placeholder="Buscar..." oninput="filterSS('ss-or', this.value)" onclick="event.stopPropagation()">
+        <div class="ss-list" id="ss-or-list"></div>
+      </div>
+    </div>
+    <select id="f-or" style="display:none" onchange="applyFilters()"><option value="">Todas</option></select>
+  </div>
   <div class="filter-group"><label>Especie</label><select id="f-es" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Tipo Equipo</label><select id="f-tq" onchange="applyFilters()"><option value="">Todas</option></select></div>
   <div class="filter-group"><label>Prod. Largo</label><select id="f-pl" onchange="applyFilters()"><option value="">Todas</option></select></div>
@@ -232,6 +257,11 @@ function updateDynamicFilters(filteredRows) {
     sel.innerHTML = '<option value="">Todas</option>';
     vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
     if(current && vals.includes(String(current))) sel.value = current;
+    // Rebuild searchable select for Origen
+    if(f === 'or') {
+      buildSS(vals, current && vals.includes(String(current)) ? current : '');
+      document.getElementById('ss-or-text').textContent = (current && vals.includes(String(current))) ? current : 'Todas';
+    }
   });
 }
 
@@ -668,6 +698,66 @@ function renderZonaCharts(z, espId, donutId, barsId, scale) {
 
   return created;
 }
+
+// ===== SEARCHABLE SELECT para Origen =====
+function buildSS(vals, currentVal) {
+  const list = document.getElementById('ss-or-list');
+  list.innerHTML = '';
+  // Opción "Todas"
+  const allOpt = document.createElement('div');
+  allOpt.className = 'ss-option' + (!currentVal ? ' selected' : '');
+  allOpt.textContent = 'Todas';
+  allOpt.dataset.value = '';
+  allOpt.onclick = () => selectSS('ss-or', '', 'Todas');
+  list.appendChild(allOpt);
+  // Opciones
+  vals.forEach(v => {
+    const opt = document.createElement('div');
+    opt.className = 'ss-option' + (v === currentVal ? ' selected' : '');
+    opt.textContent = v;
+    opt.dataset.value = v;
+    opt.onclick = () => selectSS('ss-or', v, v);
+    list.appendChild(opt);
+  });
+}
+
+function selectSS(id, value, label) {
+  document.getElementById('ss-or-text').textContent = label || 'Todas';
+  document.getElementById('f-or').value = value;
+  document.getElementById('ss-or-dropdown').style.display = 'none';
+  // Resaltar opción
+  document.querySelectorAll('#ss-or-list .ss-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.value === value);
+  });
+  applyFilters();
+}
+
+function toggleSS(id) {
+  const dd = document.getElementById('ss-or-dropdown');
+  const isOpen = dd.style.display !== 'none';
+  // Cerrar todos
+  document.querySelectorAll('.ss-dropdown').forEach(d => d.style.display = 'none');
+  if(!isOpen) {
+    dd.style.display = 'block';
+    dd.querySelector('.ss-input').value = '';
+    filterSS(id, '');
+    dd.querySelector('.ss-input').focus();
+  }
+}
+
+function filterSS(id, query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#ss-or-list .ss-option').forEach(opt => {
+    opt.classList.toggle('hidden', q !== '' && !opt.textContent.toLowerCase().includes(q));
+  });
+}
+
+// Cerrar al hacer clic fuera
+document.addEventListener('click', e => {
+  if(!e.target.closest('.searchable-select')) {
+    document.querySelectorAll('.ss-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
 
 // Init with defaults matching the screenshot
 loadData();
