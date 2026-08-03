@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stock Operativo CEMA Arauco</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f2; color: #333; font-size: 13px; }
@@ -187,6 +188,7 @@
         </div>
       </div>
       <button onclick="clearTeamFilter()" style="background:#EA7600;color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:11px;cursor:pointer;align-self:flex-start;margin-top:16px;">✕ Limpiar</button>
+      <button onclick="downloadTeamExcel()" style="background:#217346;color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:11px;cursor:pointer;align-self:flex-start;margin-top:16px;">⬇ Descargar Excel</button>
     </div>
     <table id="teamModalTable" style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:#695F58;color:#fff;">
@@ -744,6 +746,46 @@ function renderZonaCharts(z, espId, donutId, barsId, scale) {
   created.push(c3);
 
   return created;
+}
+
+function downloadTeamExcel() {
+  const zona = document.getElementById('modal-zona').value;
+  const rows = filterRows().filter(r => !zona || r.zo === zona);
+  const teamMap = {};
+  rows.forEach(r => { if(r.te) teamMap[r.te] = (teamMap[r.te]||0) + r.so; });
+
+  const teamsToShow = RAW.teamTable.filter(t =>
+    teamMap[t.team] !== undefined &&
+    (modalSelectedTeams.size === 0 || modalSelectedTeams.has(t.team))
+  );
+
+  const data = teamsToShow.map(t => {
+    const saldoComp = t.saldoUltimoPredio > 0 ? t.saldoUltimoPredio : (teamMap[t.team]||0);
+    const sobreStock = saldoComp > t.critico;
+    const pct = t.critico ? saldoComp / t.critico : null;
+    const semaforo = sobreStock ? 'ROJO' : (pct >= 0.70 ? 'AMARILLO' : 'VERDE');
+    return {
+      'Team': t.team,
+      'Saldo Predio (m³)': t.saldoUltimoPredio || 0,
+      'Stock Crítico': t.critico,
+      'Semáforo': semaforo,
+      'Últimos Predios': t.ultimosPredios || '',
+      'Fecha Notif.': t.ultimaFecha || ''
+    };
+  });
+
+  // Totales
+  const totalSaldo = teamsToShow.reduce((s,t) => s + (t.saldoUltimoPredio||0), 0);
+  data.push({'Team':'TOTAL','Saldo Predio (m³)':Math.round(totalSaldo*100)/100,'Stock Crítico':'','Semáforo':'','Últimos Predios':'','Fecha Notif.':''});
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  // Ancho columnas
+  ws['!cols'] = [{wch:18},{wch:18},{wch:14},{wch:12},{wch:45},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Team Stock Crítico');
+
+  const fecha = new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  XLSX.writeFile(wb, `Stock_Critico_Teams_${fecha}.xlsx`);
 }
 
 // ===== MODAL TEAM =====
